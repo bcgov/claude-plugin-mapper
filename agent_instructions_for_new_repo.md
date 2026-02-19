@@ -6,8 +6,6 @@ This repository is designed to be shared with the community or other teams so th
 ## 📦 What is this Repo?
 This is the home of the **Plugin Manager** tool. It contains the source code for a meta-plugin that helps users:
 1.  **Bridge** Claude Code plugins to work in GitHub Copilot, Google Gemini, and Antigravity (`agent-bridge`).
-2.  **Replicate** plugins from a central source to local projects (`plugin-replicator`).
-3.  **Audit** their plugin structure for compliance (`plugin-maintenance`).
 
 ## 📂 Structure
 The repository follows the standard Claude Plugin architecture:
@@ -18,24 +16,19 @@ repo-root/
     └── plugin-mapper/       <-- The core product
         ├── .claude-plugin/   # Manifest
         ├── README.md         # User documentation
-        ├── scripts/          # Shared utilities (audit, install)
+        ├── scripts/          # Shared utilities (install)
         └── skills/           # Distinct capabilities
-            ├── agent-bridge/      # Runtime adapters
-            ├── plugin-replicator/ # Sync logic
-            └── plugin-maintenance/# Health checks
+            └── agent-bridge/      # Runtime adapters
 ```
 
 ## 🤖 Your Role Here
 As the agent managing this repository, your goals are:
 - **Maintain Portability**: Ensure code and docs rely on relative paths (e.g., `parents[3]`) and generic terms (`central-repo`), not hardcoded user paths.
-- **Enforce Standards**: Use the included `plugins/plugin-mapper/scripts/audit_structure.py` to self-validate the repo.
 - **Support Users**: The `README.md` in `plugins/plugin-mapper/` is the primary entry point for users. Ensure it clearly explains how to "drop this folder into their `plugins/` directory".
 
 ## 🚀 Key Scripts
 - **Bridge Installer**: `plugins/plugin-mapper/scripts/bridge_installer.py`
   - *Purpose*: Deploys plugin capabilities to `.github/`, `.gemini/`, etc.
-- **Structure Audit**: `plugins/plugin-mapper/scripts/audit_structure.py`
-  - *Purpose*: Checks that this plugin (and others) are well-formed.
 
 ## 🔌 Universal Bridge: Making Any Plugin Work Anywhere
 
@@ -91,11 +84,7 @@ So `SCRIPT_DIR.parent.parent.parent` (3 levels up) = `repo-root`.
 
 | Script | Code | Depth | Status |
 |---|---|---|---|
-| `audit_structure.py` | `SCRIPT_DIR.parent.parent.parent` | 3 | ✅ Correct |
-| `plugin_replicator.py` | `current_script.parents[3]` | 3 | ✅ Correct |
-| `bulk_replicator.py` | `current_script.parents[3]` | 3 | ✅ Correct |
 | `install_all_plugins.py` | `SCRIPT_DIR.parent.parent.parent` | 3 | ✅ Correct |
-| `generate_readmes.py` | `SCRIPT_DIR.parent.parent.parent` | 3 | ✅ Correct |
 | `bridge_installer.py` | *(no root calc — uses `--plugin` arg)* | N/A | ✅ Correct |
 
 ### When Path Breaks

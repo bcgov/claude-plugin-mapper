@@ -18,6 +18,7 @@ import os
 import sys
 import shutil
 import json
+import re
 import argparse
 from pathlib import Path
 
@@ -53,6 +54,78 @@ TARGET_MAPPINGS = {
 }
 
 # --- Core Logic ---
+
+def merge_mcp_config(plugin_path: Path, root: Path, plugin_name: str):
+    """Merge plugin .mcp.json servers into the root .mcp.json.
+    Creates root .mcp.json if it doesn't exist."""
+    plugin_mcp = plugin_path / ".mcp.json"
+    if not plugin_mcp.exists():
+        return
+    try:
+        plugin_data = json.loads(plugin_mcp.read_text(encoding='utf-8'))
+        plugin_servers = plugin_data.get('mcpServers', {})
+        if not plugin_servers:
+            return
+
+        root_mcp = root / ".mcp.json"
+        if root_mcp.exists():
+            root_data = json.loads(root_mcp.read_text(encoding='utf-8'))
+        else:
+            root_data = {'mcpServers': {}}
+
+        existing_servers = root_data.setdefault('mcpServers', {})
+        added = []
+        for server_name, config in plugin_servers.items():
+            if server_name not in existing_servers:
+                existing_servers[server_name] = config
+                added.append(server_name)
+
+        root_mcp.write_text(json.dumps(root_data, indent=2), encoding='utf-8')
+        if added:
+            print(f"    -> MCP: Merged servers {added} into {root_mcp.name}")
+        else:
+            print(f"    -> MCP: All servers already registered in {root_mcp.name}")
+    except Exception as e:
+        print(f"    -> MCP: Warning — could not merge .mcp.json: {e}")
+
+def install_hooks(plugin_path: Path, root: Path, plugin_name: str):
+    """Copy hooks/hooks.json to .claude/hooks/{plugin-name}-hooks.json.
+    Hooks are Claude Code-specific; non-Claude targets are notified via a comment."""
+    hooks_file = plugin_path / "hooks" / "hooks.json"
+    if not hooks_file.exists():
+        return
+    target_hooks_dir = root / ".claude" / "hooks"
+    target_hooks_dir.mkdir(parents=True, exist_ok=True)
+    dest = target_hooks_dir / f"{plugin_name}-hooks.json"
+    shutil.copy2(hooks_file, dest)
+    print(f"    -> Hooks: {dest.relative_to(root)} (Claude only — review before activating)")
+
+def parse_frontmatter(content: str) -> tuple[dict, str]:
+    """Parse YAML frontmatter block from markdown. Returns (metadata_dict, body_without_frontmatter)."""
+    metadata = {}
+    match = re.match(r'^---\s*\n(.*?)\n---\s*\n', content, re.DOTALL)
+    if match:
+        fm_block = match.group(1)
+        body = content[match.end():]
+        # Simple key: value parse (no full YAML needed)
+        for line in fm_block.splitlines():
+            if ':' in line:
+                key, _, value = line.partition(':')
+                metadata[key.strip()] = value.strip().strip('"')
+        return metadata, body
+    return metadata, content
+
+def command_output_stem(commands_dir: Path, f: Path, plugin_name: str) -> str:
+    """Build flat output filename from potentially nested command path.
+    e.g. commands/refactor/extract.md -> plugin-name_refactor_extract"""
+    try:
+        rel = f.relative_to(commands_dir)
+    except ValueError:
+        rel = Path(f.name)
+    parts = list(rel.parts)
+    # Drop .md suffix on last part
+    parts[-1] = Path(parts[-1]).stem
+    return plugin_name + '_' + '_'.join(parts)
 
 def transform_content(content: str, target_agent: str) -> str:
     """Transforms content for specific target agents."""
@@ -101,10 +174,11 @@ def install_antigravity(plugin_path: Path, root: Path, metadata: dict):
     if commands_dir.exists():
         plugin_wf_dir = target_wf / plugin_name
         plugin_wf_dir.mkdir(parents=True, exist_ok=True)
-        for f in commands_dir.glob("*.md"):
+        for f in commands_dir.rglob("*.md"):  # rglob: pick up nested subdirs
             content = f.read_text(encoding='utf-8')
             content = transform_content(content, "antigravity")
-            dest = plugin_wf_dir / f"{plugin_name}_{f.name}" # Namespace conflict prevention
+            stem = command_output_stem(commands_dir, f, plugin_name)
+            dest = plugin_wf_dir / f"{stem}.md"
             dest.write_text(content, encoding='utf-8')
             print(f"    -> Workflow: {dest.relative_to(root)}")
 
@@ -114,7 +188,16 @@ def install_antigravity(plugin_path: Path, root: Path, metadata: dict):
         shutil.copytree(skills_dir, target_skills, dirs_exist_ok=True)
         print(f"    -> Skills: {target_skills.relative_to(root)}")
 
-    # 3. Rules (Antigravity)
+    # 3. Agents (bridge as sub-agent skills)
+    agents_dir = plugin_path / "agents"
+    if agents_dir.exists():
+        agent_skills_dir = target_skills / plugin_name / "agents"
+        agent_skills_dir.mkdir(parents=True, exist_ok=True)
+        for f in agents_dir.glob("*.md"):
+            shutil.copy2(f, agent_skills_dir / f.name)
+        print(f"    -> Agents: {agent_skills_dir.relative_to(root)}")
+
+    # 4. Rules (Antigravity)
     rules_dir = plugin_path / "rules"
     if rules_dir.exists():
         target_rules = root / TARGET_MAPPINGS["antigravity"]["rules"]
@@ -151,11 +234,11 @@ def install_github(plugin_path: Path, root: Path, metadata: dict):
         commands_dir = plugin_path / "workflows"
         
     if commands_dir.exists():
-        for f in commands_dir.glob("*.md"):
+        for f in commands_dir.rglob("*.md"):  # rglob: pick up nested subdirs
             content = f.read_text(encoding='utf-8')
             content = transform_content(content, "github")
-            # Rename .md -> .prompt.md
-            dest = target_prompts / f"{plugin_name}_{f.stem}.prompt.md"
+            stem = command_output_stem(commands_dir, f, plugin_name)
+            dest = target_prompts / f"{stem}.prompt.md"
             dest.write_text(content, encoding='utf-8')
             print(f"    -> Prompt: {dest.relative_to(root)}")
 
@@ -166,10 +249,18 @@ def install_github(plugin_path: Path, root: Path, metadata: dict):
         target_skills.mkdir(parents=True, exist_ok=True)
         shutil.copytree(skills_dir, target_skills, dirs_exist_ok=True)
         print(f"    -> Skills: {target_skills.relative_to(root)}")
-    else:
-        print("    -> Skills: None found in plugin.")
 
-    # 3. Rules
+    # 3. Agents (bridge as sub-agent skills)
+    agents_dir = plugin_path / "agents"
+    if agents_dir.exists():
+        target_skills_dir = root / TARGET_MAPPINGS["github"]["skills"]
+        agent_skills_dir = target_skills_dir / plugin_name / "agents"
+        agent_skills_dir.mkdir(parents=True, exist_ok=True)
+        for f in agents_dir.glob("*.md"):
+            shutil.copy2(f, agent_skills_dir / f.name)
+        print(f"    -> Agents: {agent_skills_dir.relative_to(root)}")
+
+    # 4. Rules
     rules_dir = plugin_path / "rules"
     if rules_dir.exists():
         target_rules = root / TARGET_MAPPINGS["github"]["rules"]
@@ -190,12 +281,15 @@ def install_gemini(plugin_path: Path, root: Path, metadata: dict):
         commands_dir = plugin_path / "workflows"
         
     if commands_dir.exists():
-        for f in commands_dir.glob("*.md"):
-            content = f.read_text(encoding='utf-8')
-            content = transform_content(content, "gemini")
-            # Wrap in TOML
-            toml_content = f'command = "{plugin_name}:{f.stem}"\ndescription = "Imported from plugin"\nprompt = """\n{content}\n"""'
-            dest = target_cmds / f"{plugin_name}_{f.stem}.toml"
+        for f in commands_dir.rglob("*.md"):  # rglob: pick up nested subdirs
+            raw_content = f.read_text(encoding='utf-8')
+            fm, body = parse_frontmatter(raw_content)  # Extract frontmatter
+            description = fm.get('description', 'Imported from plugin')
+            body = transform_content(body, "gemini")
+            stem = command_output_stem(commands_dir, f, plugin_name)
+            cmd_name = stem.replace(plugin_name + '_', '', 1).replace('_', ':')
+            toml_content = f'command = "{plugin_name}:{cmd_name}"\ndescription = "{description}"\nprompt = """\n{body}\n"""'
+            dest = target_cmds / f"{stem}.toml"
             dest.write_text(toml_content, encoding='utf-8')
             print(f"    -> Command: {dest.relative_to(root)}")
 
@@ -207,7 +301,17 @@ def install_gemini(plugin_path: Path, root: Path, metadata: dict):
         shutil.copytree(skills_dir, target_skills, dirs_exist_ok=True)
         print(f"    -> Skills: {target_skills.relative_to(root)}")
 
-    # 3. Rules
+    # 3. Agents (bridge as sub-agent skills)
+    agents_dir = plugin_path / "agents"
+    if agents_dir.exists():
+        target_skills_dir = root / TARGET_MAPPINGS["gemini"]["skills"]
+        agent_skills_dir = target_skills_dir / plugin_name / "agents"
+        agent_skills_dir.mkdir(parents=True, exist_ok=True)
+        for f in agents_dir.glob("*.md"):
+            shutil.copy2(f, agent_skills_dir / f.name)
+        print(f"    -> Agents: {agent_skills_dir.relative_to(root)}")
+
+    # 4. Rules
     rules_dir = plugin_path / "rules"
     if rules_dir.exists():
         target_rules = root / TARGET_MAPPINGS["gemini"]["rules"]
@@ -229,12 +333,11 @@ def install_claude(plugin_path: Path, root: Path, metadata: dict):
         commands_dir = plugin_path / "workflows"
         
     if commands_dir.exists():
-        for f in commands_dir.glob("*.md"):
+        for f in commands_dir.rglob("*.md"):  # rglob: pick up nested subdirs
             content = f.read_text(encoding='utf-8')
             content = transform_content(content, "claude")
-            # Namespace: plugin_command.md
-            dest = target_cmds / f"{plugin_name}_{f.name}"
-            dest.write_text(content, encoding='utf-8')
+            stem = command_output_stem(commands_dir, f, plugin_name)
+            dest = target_cmds / f"{stem}.md"
             dest.write_text(content, encoding='utf-8')
             print(f"    -> Command: {dest.relative_to(root)}")
 
@@ -246,13 +349,26 @@ def install_claude(plugin_path: Path, root: Path, metadata: dict):
         shutil.copytree(skills_dir, target_skills, dirs_exist_ok=True)
         print(f"    -> Skills: {target_skills.relative_to(root)}")
 
-    # 3. Rules
+    # 3. Agents (bridge as sub-agent skills)
+    agents_dir = plugin_path / "agents"
+    if agents_dir.exists():
+        target_skills_dir = root / TARGET_MAPPINGS["claude"]["skills"]
+        agent_skills_dir = target_skills_dir / plugin_name / "agents"
+        agent_skills_dir.mkdir(parents=True, exist_ok=True)
+        for f in agents_dir.glob("*.md"):
+            shutil.copy2(f, agent_skills_dir / f.name)
+        print(f"    -> Agents: {agent_skills_dir.relative_to(root)}")
+
+    # 4. Rules
     rules_dir = plugin_path / "rules"
     if rules_dir.exists():
         target_rules = root / TARGET_MAPPINGS["claude"]["rules"]
         target_rules.mkdir(parents=True, exist_ok=True)
         shutil.copytree(rules_dir, target_rules, dirs_exist_ok=True)
         print(f"    -> Rules: {target_rules.relative_to(root)}")
+
+    # 5. Hooks (Claude-specific)
+    install_hooks(plugin_path, root, plugin_name)
 
 def main():
     parser = argparse.ArgumentParser(description="Plugin Bridge Installer")
@@ -278,7 +394,10 @@ def main():
     if args.target == "auto":
         targets = detect_targets(root)
         if not targets:
-            print("No compatible environments detected (.agent, .github, .gemini, .claude).")
+            print("Error: No compatible environments detected.")
+            print("Create one or more target directories first:")
+            print("  mkdir .agent .github .gemini .claude")
+            print("Then re-run the bridge installer.")
             sys.exit(1)
     else:
         targets = [args.target]
@@ -294,6 +413,9 @@ def main():
             install_gemini(plugin_path, root, metadata)
         elif t == "claude":
             install_claude(plugin_path, root, metadata)
+
+    # MCP config merge (always, affects all targets)
+    merge_mcp_config(plugin_path, root, metadata.get('name', plugin_path.name))
 
     print("Installation complete.")
 

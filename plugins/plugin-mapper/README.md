@@ -66,4 +66,4 @@ python3 plugins/plugin-mapper/scripts/bridge_installer.py --plugin plugins/my-to
 
 ## 🧩 Compatibility
 
-The bridge supports any plugin that follows the [Claude Code Plugin Manifest](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/plugins) specification. It parses the `plugin.json` (or `.claude-plugin/manifest.json`) and generates the appropriate adapters.
+The bridge supports any plugin that follows the [Claude Code Plugin Manifest](https://code.claude.com/docs/en/plugins) specification. It parses the `plugin.json` (or `.claude-plugin/manifest.json`) and generates the appropriate adapters.

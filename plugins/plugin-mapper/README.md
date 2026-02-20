@@ -1,69 +1,96 @@
-# Plugin Manager
+# Plugin Mapper
 
 **The Universal Bridge for Agent Plugins**
 
-The **Plugin Manager** is a specialized tool designed to **convert and bridge** standard Claude Code Plugins for use in other agent environments. It enables your plugins to work seamlessly in **GitHub Copilot** (`.github`), **Antigravity** (`.agent`), and **Google Gemini** (`.gemini`).
+The **Plugin Mapper** converts and bridges standard Claude Code plugins for use in any agent environment — write your plugin once and deploy it everywhere.
 
-## 🚀 Key Features
+## 🌐 Supported Targets
 
-*   **Write Once, Run Everywhere**: Create plugins in the standard `.claude-plugin` format.
-*   **Automatic Bridging**: 
-    *   **GitHub Copilot**: Converts commands to `.prompt.md` files in `.github/prompts/`.
-    *   **Google Gemini**: Wraps commands in TOML for `.gemini/commands`.
-    *   **Antigravity**: Adapts workflows for `.agent/workflows`.
-*   **Zero-Config**: Auto-detects your environment and installs the necessary adapters.
+| Target | Directory | What Gets Created |
+|---|---|---|
+| **Claude Code** | `.claude/` | `commands/*.md`, `skills/`, `hooks/` |
+| **GitHub Copilot** | `.github/` | `prompts/*.prompt.md`, `skills/` |
+| **Google Gemini** | `.gemini/` | `commands/*.toml`, `skills/` |
+| **Antigravity** | `.agent/` | `workflows/`, `skills/` |
 
 ---
 
-## 📦 Installation & Usage
+## 🚀 Quick Start
 
-### 1. Project Setup
-Ensure your repository has the following structure:
-
-```text
-my-repo/
-├── .github/          # (Optional) For Copilot prompts
-├── .gemini/          # (Optional) For Gemini commands
-├── .agent/           # (Optional) For Antigravity workflows
-└── plugins/          # Your plugin directory
-    ├── plugin-mapper/  <-- Drop THIS folder here
-    └── my-tool/         <-- Drop your other plugins here
-        ├── plugin.json
-        └── ...
+### 1. Create Target Directories
+Create whichever agent environment directories you use (the bridge auto-detects them):
+```bash
+mkdir .agent .github .gemini .claude
 ```
 
-### 2. Install Plugins
-Just drop any standard Claude Code plugin folder into the `plugins/` directory.
+> ⚠️ The `--target auto` mode requires at least one of these directories to exist. If none are found, the installer will print the exact `mkdir` command to run.
+
+### 2. Drop Your Plugin In
+Place any standard Claude Code plugin in `plugins/`:
+```
+my-repo/
+├── .github/          ← GitHub Copilot target
+├── .gemini/          ← Gemini target
+├── .agent/           ← Antigravity target
+├── .claude/          ← Claude Code target
+└── plugins/
+    ├── plugin-mapper/   ← This tool
+    └── my-plugin/       ← Your plugin (standard .claude-plugin format)
+```
 
 ### 3. Run the Bridge
-Run the installer script to automatically bridge all plugins in your `plugins/` folder to your active agent environments.
 
+**Single plugin:**
 ```bash
-python3 plugins/plugin-mapper/scripts/install_all_plugins.py
+python plugins/plugin-mapper/scripts/bridge_installer.py --plugin plugins/my-plugin --target auto
 ```
 
-That's it! Your plugins are now available in your configured agents.
+**All plugins at once:**
+```bash
+python plugins/plugin-mapper/scripts/install_all_plugins.py
+```
 
 ---
 
 ## 🛠️ Advanced Usage
 
-### Single Plugin Installation
-If you only want to install a specific plugin:
-
+### Force a Specific Target
+Install to a specific environment only (creates directory if needed):
 ```bash
-python3 plugins/plugin-mapper/scripts/bridge_installer.py --plugin plugins/my-target-plugin --target auto
+python plugins/plugin-mapper/scripts/bridge_installer.py --plugin plugins/my-plugin --target github
 ```
 
-### Targeted Installation
-Force installation to a specific environment (e.g., only GitHub Copilot), even if the directory doesn't exist (it will be created):
+### What Gets Bridged
 
-```bash
-python3 plugins/plugin-mapper/scripts/bridge_installer.py --plugin plugins/my-tool --target github
-```
+The installer maps every component of a plugin:
+
+| Plugin Component | Output |
+|---|---|
+| `commands/*.md` | Per-target command format (`.md`, `.prompt.md`, `.toml`) |
+| `commands/subdir/*.md` | Flattened as `plugin_subdir_command.ext` |
+| `skills/` | Copied directly into `{target}/skills/` |
+| `agents/*.md` | Copied into `{target}/skills/{plugin}/agents/` |
+| `rules/` | Copied into `{target}/rules/` |
+| `hooks/hooks.json` | Copied to `.claude/hooks/{plugin}-hooks.json` (Claude only) |
+| `.mcp.json` | MCP servers merged into root `.mcp.json` |
 
 ---
 
-## 🧩 Compatibility
+## 🧩 Plugin Format
 
-The bridge supports any plugin that follows the [Claude Code Plugin Manifest](https://code.claude.com/docs/en/plugins) specification. It parses the `plugin.json` (or `.claude-plugin/manifest.json`) and generates the appropriate adapters.
+The bridge supports any plugin following the standard `.claude-plugin` manifest structure:
+
+```
+my-plugin/
+├── .claude-plugin/
+│   └── plugin.json      ← Plugin metadata (name, version, etc.)
+├── commands/            ← Slash commands (supports subdirectories)
+├── skills/              ← Persistent knowledge/behavior files
+├── agents/              ← Sub-agent persona definitions
+├── rules/               ← Behavioral rules
+├── hooks/
+│   └── hooks.json       ← Claude Code lifecycle hooks
+└── .mcp.json            ← MCP server declarations
+```
+
+All components are optional — the bridge gracefully skips missing directories.

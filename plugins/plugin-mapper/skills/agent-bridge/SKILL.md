@@ -1,45 +1,82 @@
 ---
 name: agent-bridge
-description: Bridge plugin capabilities (commands, skills) to specific agent environments (GitHub Copilot, Gemini, Antigravity). Use this to adapting plugins to the specific formats required by these runtimes.
+description: Bridge plugin capabilities (commands, skills, agents, hooks, MCP) to specific agent environments (Claude Code, GitHub Copilot, Gemini, Antigravity). Use this skill when converting or installing a plugin to a target runtime.
 allowed-tools: Bash, Write, Read
 ---
 
 # Agent Bridge
 
 ## Overview
-This skill **adapters and transforms** plugin content into the specific formats required by different AI agents. While `plugin-replicator` moves the source code, `agent-bridge` ensures the runtime environment (Copilot, Gemini, etc.) can actually *see* and *use* the tools.
+This skill **adapts and transforms** plugin content into the specific formats required by different AI agent environments. It ensures each runtime can see and use the plugin's capabilities in its native format.
+
+## Prerequisite
+The auto-detect mode only targets **existing** directories. Create them first:
+```bash
+mkdir .agent .github .gemini .claude
+```
+> If no directories are found, the installer will print this exact error with the mkdir command.
 
 ## Usage
 
-### Deploy to Runtime Environment
-Run the bridge installer to inject plugin capabilities into the detected agent configuration folders.
-
-> **CRITICAL**: The installer only targets existing folders. You **MUST** create these directories in your project root first:
-> ```bash
-> mkdir .github .gemini .agent .claude
-> ```
-
+### Bridge a Single Plugin
 ```bash
-# Auto-detect environment and install (after creating directories)
-python3 plugins/plugin-mapper/scripts/bridge_installer.py --plugin <plugin-path> --target auto
+# Auto-detect all present environments
+python plugins/plugin-mapper/scripts/bridge_installer.py --plugin <plugin-path> --target auto
 
-
-# Force install for GitHub Copilot (will create directories if missing)
-python3 plugins/plugin-mapper/scripts/bridge_installer.py --plugin <plugin-path> --target github
+# Force a specific environment (creates directory if needed)
+python plugins/plugin-mapper/scripts/bridge_installer.py --plugin <plugin-path> --target github
 ```
 
 **Example:**
 ```bash
-python3 plugins/plugin-mapper/scripts/bridge_installer.py --plugin plugins/guardian-onboarding --target github
+python plugins/plugin-mapper/scripts/bridge_installer.py --plugin plugins/my-plugin --target auto
 ```
 
-## Supported Environments
-*   **Antigravity**: transforms commands for `.agent/workflows`.
-*   **GitHub Copilot**: Converts commands to `.prompt.md` files in `.github/prompts`.
-*   **Gemini**: Wraps commands in TOML format for `.gemini/commands`.
-*   **Claude Code**: Native support (usually handled by `plugin-replicator`, but bridge can adapt older formats).
+### Bridge All Plugins
+```bash
+python plugins/plugin-mapper/scripts/install_all_plugins.py
+```
 
-## When to use
-*   **Copilot Integration**: When you want your Claude plugins to be available in VS Code Chat.
-*   **Gemini Context**: When working in Google IDX or Geminified environments.
-*   **Legacy Support**: When using older agent architectures that require scattered file placement.
+---
+
+## What Gets Bridged
+
+| Plugin Source | Output |
+|---|---|
+| `commands/*.md` | Converted to target format with `plugin-name_command` prefix |
+| `commands/subdir/*.md` | Supported — flattened as `plugin_subdir_command.ext` |
+| `skills/` | Copied to `{target}/skills/` |
+| `agents/*.md` | Copied to `{target}/skills/{plugin}/agents/` on all targets |
+| `rules/` | Copied to `{target}/rules/` |
+| `hooks/hooks.json` | → `.claude/hooks/{plugin}-hooks.json` (Claude only; review before activating) |
+| `.mcp.json` | MCP servers merged into root `.mcp.json` (de-duplicated) |
+
+---
+
+## Supported Environments
+
+| Target | Flag | Command Directory | Notes |
+|---|---|---|---|
+| **Claude Code** | `claude` | `.claude/commands/` | Native format; also gets hooks |
+| **GitHub Copilot** | `github` | `.github/prompts/` | `.prompt.md` extension |
+| **Google Gemini** | `gemini` | `.gemini/commands/` | TOML format; frontmatter stripped, description extracted |
+| **Antigravity** | `antigravity` | `.agent/workflows/` | Standard markdown |
+
+### Gemini TOML Format
+Command `.md` files are wrapped in TOML. Frontmatter is parsed — the `description` field is extracted and used as the TOML `description`. The frontmatter block is stripped from the prompt body.
+
+```toml
+command = "plugin-name:command-name"
+description = "Description from frontmatter"
+prompt = """
+# Command content without frontmatter
+...
+"""
+```
+
+---
+
+## When to Use
+- **Installing a new plugin**: Run bridge after dropping a plugin into `plugins/`.
+- **Adding a new target environment**: Existing plugins need to be re-bridged after adding `.gemini/` etc.
+- **Upgrading a plugin**: Re-run bridge to overwrite with latest command content.

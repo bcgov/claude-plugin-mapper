@@ -10,6 +10,8 @@
 > npx skills add microsoft/skills
 > ```
 >
+> you can can use that to install the skill creator skill to create your own skills.
+>
 > You can install these skills directly within your agent environment:
 > ```bash
 > # Inside Copilot CLI, run these slash commands:

@@ -1,5 +1,23 @@
 # Plugin Mapper
 
+> [!TIP]
+> **GitHub Copilot Users**
+> While the Plugin Mapper is a powerful tool for bridging environments, we highly recommend exploring the **[Copilot Marketplace](https://github.com/marketplace?type=apps&query=copilot+plugin)** as a primary starting point.
+>
+> **Resource Highlight:**
+> - [microsoft/skills](https://github.com/microsoft/skills): A comprehensive collection of over 125 skills installable via CLI.  You can use the [Skill Explorer](https://microsoft.github.io/skills/) to find and install skills and use 
+> ```bash
+> npx skills add microsoft/skills
+> ```
+>
+> You can install these skills directly within your agent environment:
+> ```bash
+> # Inside Copilot CLI, run these slash commands:
+> /plugin marketplace add microsoft/skills
+> /plugin install deep-wiki@skills
+> /plugin install azure-skills@skills
+> ```
+
 This repository hosts the source code for the **Plugin Mapper**, a meta-plugin that bridges standard Claude Code plugins to any agent environment.
 
 ## 📦 What's Inside?

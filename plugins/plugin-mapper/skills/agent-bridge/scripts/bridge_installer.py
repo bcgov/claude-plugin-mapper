@@ -11,7 +11,7 @@ Supported Targets:
 - Gemini (.gemini/)
 
 Usage:
-  python3 plugins/plugin-mapper/scripts/bridge_installer.py --plugin <path> [--target <auto|antigravity|github|gemini>]
+  python3 plugins/plugin-mapper/skills/agent-bridge/scripts/bridge_installer.py --plugin <path> [--target <auto|antigravity|github|gemini>]
 """
 
 import os
@@ -94,6 +94,7 @@ def install_hooks(plugin_path: Path, root: Path, plugin_name: str):
     hooks_file = plugin_path / "hooks" / "hooks.json"
     if not hooks_file.exists():
         return
+    
     target_hooks_dir = root / ".claude" / "hooks"
     target_hooks_dir.mkdir(parents=True, exist_ok=True)
     dest = target_hooks_dir / f"{plugin_name}-hooks.json"
@@ -129,7 +130,7 @@ def command_output_stem(commands_dir: Path, f: Path, plugin_name: str) -> str:
 
 def transform_content(content: str, target_agent: str) -> str:
     """Transforms content for specific target agents."""
-    # 1. Actor Swapping (Spec Kitty convention)
+    # 1. Actor Swapping
     # Replace default actor with target
     if target_agent == "antigravity":
         content = content.replace('--actor "windsurf"', '--actor "antigravity"')
@@ -370,10 +371,60 @@ def install_claude(plugin_path: Path, root: Path, metadata: dict):
     # 5. Hooks (Claude-specific)
     install_hooks(plugin_path, root, plugin_name)
 
+def install_generic(plugin_path: Path, root: Path, metadata: dict, target_name: str):
+    print(f"  [{target_name.capitalize()}] Installing generic mapped target...")
+    
+    # Generic target directories map to standard markdown workflows/skills logic
+    target_dir = root / f".{target_name}"
+    target_wf = target_dir / "commands"
+    target_skills = target_dir / "skills"
+    target_rules = target_dir / "rules"
+
+    target_wf.mkdir(parents=True, exist_ok=True)
+    target_skills.mkdir(parents=True, exist_ok=True)
+    target_rules.mkdir(parents=True, exist_ok=True)
+
+    plugin_name = metadata.get("name", plugin_path.name)
+
+    # 1. Workflows (Commands)
+    commands_dir = plugin_path / "commands"
+    if not commands_dir.exists():
+        commands_dir = plugin_path / "workflows"
+        
+    if commands_dir.exists():
+        for f in commands_dir.rglob("*.md"):
+            content = f.read_text(encoding='utf-8')
+            content = transform_content(content, target_name)
+            stem = command_output_stem(commands_dir, f, plugin_name)
+            dest = target_wf / f"{stem}.md"
+            dest.write_text(content, encoding='utf-8')
+            print(f"    -> Command: {dest.relative_to(root)}")
+
+    # 2. Skills
+    skills_dir = plugin_path / "skills"
+    if skills_dir.exists():
+        shutil.copytree(skills_dir, target_skills, dirs_exist_ok=True)
+        print(f"    -> Skills: {target_skills.relative_to(root)}")
+
+    # 3. Agents (bridge as sub-agent skills)
+    agents_dir = plugin_path / "agents"
+    if agents_dir.exists():
+        agent_skills_dir = target_skills / plugin_name / "agents"
+        agent_skills_dir.mkdir(parents=True, exist_ok=True)
+        for f in agents_dir.glob("*.md"):
+            shutil.copy2(f, agent_skills_dir / f.name)
+        print(f"    -> Agents: {agent_skills_dir.relative_to(root)}")
+
+    # 4. Rules
+    rules_dir = plugin_path / "rules"
+    if rules_dir.exists():
+        shutil.copytree(rules_dir, target_rules, dirs_exist_ok=True)
+        print(f"    -> Rules: {target_rules.relative_to(root)}")
+
 def main():
     parser = argparse.ArgumentParser(description="Plugin Bridge Installer")
     parser.add_argument("--plugin", required=True, help="Path to plugin directory")
-    parser.add_argument("--target", default="auto", choices=["auto", "antigravity", "github", "gemini", "claude"], help="Target environment")
+    parser.add_argument("--target", default="auto", help="Target environment (e.g., auto, antigravity, claude, cursor, roo, OpenHands)")
     args = parser.parse_args()
 
     plugin_path = Path(args.plugin).resolve()
@@ -405,6 +456,7 @@ def main():
     print(f"Installing plugin '{metadata['name']}' to: {', '.join(targets)}")
 
     for t in targets:
+        # Standard complex parsers
         if t == "antigravity":
             install_antigravity(plugin_path, root, metadata)
         elif t == "github":
@@ -413,6 +465,9 @@ def main():
             install_gemini(plugin_path, root, metadata)
         elif t == "claude":
             install_claude(plugin_path, root, metadata)
+        else:
+            # Universal Generic fallback block
+            install_generic(plugin_path, root, metadata, t.lower())
 
     # MCP config merge (always, affects all targets)
     merge_mcp_config(plugin_path, root, metadata.get('name', plugin_path.name))

@@ -7,27 +7,33 @@ Iterates through all directories in `plugins/` and runs the `bridge_installer.py
 for each one. This ensures a clean, full installation of all available plugins.
 
 Usage:
-    python3 plugins/plugin-mapper/scripts/install_all_plugins.py
+Usage:
+    python3 plugins/plugin-mapper/skills/agent-bridge/scripts/install_all_plugins.py --target <auto|antigravity|github|gemini|claude>
 """
 
 import os
 import sys
+import argparse
 import subprocess
 from pathlib import Path
 
 # Setup paths
 SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent # c:/.../claude-plugins
+PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent # c:/.../claude-plugins
 PLUGINS_ROOT = PROJECT_ROOT / "plugins"
 
 INSTALLER_SCRIPT = SCRIPT_DIR / "bridge_installer.py"
 
 def main():
+    parser = argparse.ArgumentParser(description="Bulk Plugin Installer")
+    parser.add_argument("--target", default="auto", help="Target environment (e.g., auto, antigravity, claude, cursor, roo, OpenHands)")
+    args = parser.parse_args()
+
     if not INSTALLER_SCRIPT.exists():
         print(f"❌ Error: Installer script not found at {INSTALLER_SCRIPT}")
         sys.exit(1)
 
-    print(f"🚀 Starting Batch Installation from {PLUGINS_ROOT}...")
+    print(f"🚀 Starting Batch Installation to target '{args.target}' from {PLUGINS_ROOT}...")
     
     plugins_processed = 0
     plugins_failed = 0
@@ -52,7 +58,7 @@ def main():
                 sys.executable, 
                 str(INSTALLER_SCRIPT),
                 "--plugin", str(plugin_dir),
-                "--target", "auto"
+                "--target", args.target
             ]
             
             result = subprocess.run(cmd, check=True, text=True)

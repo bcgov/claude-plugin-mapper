@@ -52,9 +52,31 @@ repo-root/
 
 **Gemini TOML**: Frontmatter (`---description:...---`) is stripped from the prompt body. The `description` field is extracted and used as the TOML `description` value.
 
+## 🔄 Self-Bridging This Repo
+
+This repo includes the bridge skill at `.agent/skills/agent-bridge/scripts/`. You can bridge the `plugin-mapper` plugin into all four environments directly:
+
+```bash
+# Bridge to Antigravity (.agent/)
+python3 .agent/skills/agent-bridge/scripts/bridge_installer.py --plugin plugins/plugin-mapper --target antigravity
+
+# Bridge to Claude Code (.claude/)
+python3 .agent/skills/agent-bridge/scripts/bridge_installer.py --plugin plugins/plugin-mapper --target claude
+
+# Bridge to Gemini (.gemini/)
+python3 .agent/skills/agent-bridge/scripts/bridge_installer.py --plugin plugins/plugin-mapper --target gemini
+
+# Bridge to GitHub Copilot (.github/)
+python3 .agent/skills/agent-bridge/scripts/bridge_installer.py --plugin plugins/plugin-mapper --target github
+```
+
+> **Note**: Run these from the repo root. `bridge_installer.py` uses `Path.cwd()` + `--plugin` arg so it resolves correctly regardless of where the script lives.
+
+> **⚠️ `install_all_plugins.py` does NOT work in this repo.** When the script lives at `.agent/skills/agent-bridge/scripts/`, it goes 5 levels up to resolve `PROJECT_ROOT` — landing at `/Users/<you>/Projects/` instead of the repo root. Use `bridge_installer.py` directly (as above) when working in this repo.
+
 ## ⚠️ Critical: Path Translation in Scripts
 
-Scripts assume this directory depth:
+Scripts assume this directory depth **when installed into a user's project** (i.e. at `plugins/plugin-mapper/scripts/`):
 ```
 repo-root/                        ← PROJECT_ROOT
 └── plugins/
@@ -65,7 +87,7 @@ repo-root/                        ← PROJECT_ROOT
 
 `SCRIPT_DIR.parent.parent.parent` (3 levels up) = `repo-root`.
 
-| Script | Root Calc | Status |
+| Script | Root Calc | Status (in user project) |
 |---|---|---|
 | `install_all_plugins.py` | `SCRIPT_DIR.parent.parent.parent` | ✅ Correct |
 | `bridge_installer.py` | Uses `Path.cwd()` + `--plugin` arg | ✅ Correct |

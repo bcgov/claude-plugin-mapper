@@ -76,20 +76,22 @@ python3 .agent/skills/agent-bridge/scripts/bridge_installer.py --plugin plugins/
 
 ## ⚠️ Critical: Path Translation in Scripts
 
-Scripts assume this directory depth **when installed into a user's project** (i.e. at `plugins/plugin-mapper/scripts/`):
+Scripts assume this directory depth **when installed into a user's project** (i.e. at `plugins/plugin-mapper/skills/agent-bridge/scripts/`):
 ```
 repo-root/                        ← PROJECT_ROOT
 └── plugins/
     └── plugin-mapper/
-        └── scripts/
-            └── script.py         ← __file__
+        └── skills/
+            └── agent-bridge/
+                └── scripts/
+                    └── script.py ← __file__
 ```
 
-`SCRIPT_DIR.parent.parent.parent` (3 levels up) = `repo-root`.
+`SCRIPT_DIR.parent.parent.parent.parent.parent` (5 levels up) = `repo-root`.
 
 | Script | Root Calc | Status (in user project) |
 |---|---|---|
-| `install_all_plugins.py` | `SCRIPT_DIR.parent.parent.parent` | ✅ Correct |
+| `install_all_plugins.py` | `SCRIPT_DIR.parent.parent.parent.parent.parent` | ✅ Correct |
 | `bridge_installer.py` | Uses `Path.cwd()` + `--plugin` arg | ✅ Correct |
 
 ## 📝 Context for Commits

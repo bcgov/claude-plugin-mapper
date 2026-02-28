@@ -78,6 +78,11 @@ TARGET_MAPPINGS = {
         "commands": ".claude/commands",
         "skills": ".claude/skills",
         "rules": ".claude/rules"
+    },
+    "azure": {
+        "check": ".azure",
+        "skills": ".azure/skills",
+        "agents": ".azure/agents"
     }
 }
 
@@ -284,14 +289,16 @@ def install_antigravity(plugin_path: Path, root: Path, metadata: dict):
         shutil.copytree(skills_dir, target_skills, dirs_exist_ok=True)
         print(f"    -> Skills: {target_skills.relative_to(root)}")
 
-    # 3. Agents (bridge as sub-agent skills)
+    # 3. Agents (bridge as progressive disclosure skills)
     agents_dir = plugin_path / "agents"
     if agents_dir.exists():
-        agent_skills_dir = target_skills / plugin_name / "agents"
-        agent_skills_dir.mkdir(parents=True, exist_ok=True)
         for f in agents_dir.glob("*.md"):
-            shutil.copy2(f, agent_skills_dir / f.name)
-        print(f"    -> Agents: {agent_skills_dir.relative_to(root)}")
+            agent_name = f.stem
+            final_name = plugin_name if plugin_name.endswith(agent_name) else f"{plugin_name}-{agent_name}"
+            agent_dir = target_skills / final_name
+            agent_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(f, agent_dir / "SKILL.md")
+        print(f"    -> Agents (as Skills): {target_skills.relative_to(root)}")
 
     # 4. Rules (Antigravity natively supports .agent/rules/ directories)
     rules_dir = plugin_path / "rules"
@@ -364,14 +371,18 @@ def install_github(plugin_path: Path, root: Path, metadata: dict):
         shutil.copytree(skills_dir, target_skills, dirs_exist_ok=True)
         print(f"    -> Skills: {target_skills.relative_to(root)}")
 
-    # 3. Agents -> .github/agents/ (IDE agents for Copilot Chat)
+    # 3. Agents (bridge as progressive disclosure skills)
     agents_dir = plugin_path / "agents"
     if agents_dir.exists():
-        target_agents_dir = root / TARGET_MAPPINGS["github"]["agents"]
-        target_agents_dir.mkdir(parents=True, exist_ok=True)
+        target_skills_dir = root / TARGET_MAPPINGS["github"]["skills"]
+        target_skills_dir.mkdir(parents=True, exist_ok=True)
         for f in agents_dir.glob("*.md"):
-            shutil.copy2(f, target_agents_dir / f.name)
-        print(f"    -> Agents: {target_agents_dir.relative_to(root)}")
+            agent_name = f.stem
+            final_name = plugin_name if plugin_name.endswith(agent_name) else f"{plugin_name}-{agent_name}"
+            agent_dir = target_skills_dir / final_name
+            agent_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(f, agent_dir / "SKILL.md")
+        print(f"    -> Agents (as Skills): {target_skills_dir.relative_to(root)}")
 
     # 4. GitHub Workflows -> .github/workflows/ (CI/CD YAML runners)
     github_wf_dir = plugin_path / "github_workflows"
@@ -471,15 +482,18 @@ def install_claude(plugin_path: Path, root: Path, metadata: dict):
         shutil.copytree(skills_dir, target_skills, dirs_exist_ok=True)
         print(f"    -> Skills: {target_skills.relative_to(root)}")
 
-    # 3. Agents (bridge as sub-agent skills)
+    # 3. Agents (bridge as progressive disclosure skills)
     agents_dir = plugin_path / "agents"
     if agents_dir.exists():
         target_skills_dir = root / TARGET_MAPPINGS["claude"]["skills"]
-        agent_skills_dir = target_skills_dir / plugin_name / "agents"
-        agent_skills_dir.mkdir(parents=True, exist_ok=True)
+        target_skills_dir.mkdir(parents=True, exist_ok=True)
         for f in agents_dir.glob("*.md"):
-            shutil.copy2(f, agent_skills_dir / f.name)
-        print(f"    -> Agents: {agent_skills_dir.relative_to(root)}")
+            agent_name = f.stem
+            final_name = plugin_name if plugin_name.endswith(agent_name) else f"{plugin_name}-{agent_name}"
+            agent_dir = target_skills_dir / final_name
+            agent_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(f, agent_dir / "SKILL.md")
+        print(f"    -> Agents (as Skills): {target_skills_dir.relative_to(root)}")
 
     # 4. Monolithic Rules (CLAUDE.md)
     rules_dir = plugin_path / "rules"
@@ -491,6 +505,27 @@ def install_claude(plugin_path: Path, root: Path, metadata: dict):
 
     # 5. Hooks (Claude-specific)
     install_hooks(plugin_path, root, plugin_name)
+
+def install_azure(plugin_path: Path, root: Path, metadata: dict):
+    print("  [Azure] Installing...")
+    plugin_name = metadata.get("name", plugin_path.name)
+
+    # 1. Skills
+    skills_dir = plugin_path / "skills"
+    if skills_dir.exists():
+        target_skills = root / TARGET_MAPPINGS["azure"]["skills"]
+        target_skills.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(skills_dir, target_skills, dirs_exist_ok=True)
+        print(f"    -> Skills: {target_skills.relative_to(root)}")
+
+    # 2. Agents
+    agents_dir = plugin_path / "agents"
+    if agents_dir.exists():
+        target_agents_dir = root / TARGET_MAPPINGS["azure"]["agents"]
+        target_agents_dir.mkdir(parents=True, exist_ok=True)
+        for f in agents_dir.glob("*.md"):
+            shutil.copy2(f, target_agents_dir / f.name)
+        print(f"    -> Agents: {target_agents_dir.relative_to(root)}")
 
 def install_generic(plugin_path: Path, root: Path, metadata: dict, target_name: str):
     print(f"  [{target_name.capitalize()}] Installing generic mapped target...")
@@ -527,14 +562,16 @@ def install_generic(plugin_path: Path, root: Path, metadata: dict, target_name: 
         shutil.copytree(skills_dir, target_skills, dirs_exist_ok=True)
         print(f"    -> Skills: {target_skills.relative_to(root)}")
 
-    # 3. Agents (bridge as sub-agent skills)
+    # 3. Agents (bridge as progressive disclosure skills)
     agents_dir = plugin_path / "agents"
     if agents_dir.exists():
-        agent_skills_dir = target_skills / plugin_name / "agents"
-        agent_skills_dir.mkdir(parents=True, exist_ok=True)
         for f in agents_dir.glob("*.md"):
-            shutil.copy2(f, agent_skills_dir / f.name)
-        print(f"    -> Agents: {agent_skills_dir.relative_to(root)}")
+            agent_name = f.stem
+            final_name = plugin_name if plugin_name.endswith(agent_name) else f"{plugin_name}-{agent_name}"
+            agent_dir = target_skills / final_name
+            agent_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(f, agent_dir / "SKILL.md")
+        print(f"    -> Agents (as Skills): {target_skills.relative_to(root)}")
 
     # 4. Rules
     rules_dir = plugin_path / "rules"
@@ -591,6 +628,8 @@ def main():
             install_gemini(plugin_path, root, metadata)
         elif t == "claude":
             install_claude(plugin_path, root, metadata)
+        elif t == "azure" or t == "azure-foundry":
+            install_azure(plugin_path, root, metadata)
         else:
             # Universal Generic fallback block
             install_generic(plugin_path, root, metadata, t.lower())

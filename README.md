@@ -10,17 +10,29 @@
 
 ## How to Install Skills Now
 
-You no longer need to download python mapper scripts. We strongly recommend using `npx add` to install all skills natively into your agent environments (Claude, Copilot, Gemini, Cursor, etc.) directly from the terminal:
+You no longer need to download python mapper scripts. We strongly recommend using `npx skills add` to install all skills natively into your agent environments (Claude, Copilot, Gemini, Cursor, etc.) directly from the terminal. 
+
+`npx skills` can be used with ANY GitHub repository. 
+
+Here are a few examples:
 
 ```bash
-# Install ALL skills from the new monorepo:
-npx add richfrem/agent-plugins-skills
+# Install all plugins from this repo
+npx skills add richfrem/agent-plugins-skills
 
-# Install a specific skill (e.g. adr-management):
-npx add richfrem/agent-plugins-skills/plugins/adr-management
+# Install a single plugin
+npx skills add richfrem/agent-plugins-skills/plugins/rlm-factory
+npx skills add richfrem/agent-plugins-skills/plugins/vector-db
+npx skills add richfrem/agent-plugins-skills/plugins/spec-kitty-plugin
+
+# Update all installed skills to latest
+npx skills update
 ```
 
-## Legacy Source
+### Broader Marketplaces and Ecosystems
+You can also explore and add skills from the broader agent skills marketplace, including:
+- **[microsoft/skills](https://github.com/microsoft/skills)**: A comprehensive collection of over 125 skills installable via CLI (`npx skills add microsoft/skills`).
+- **Claude Plugins**: Find various plugins optimized for Claude.
 
 For historical reference, the bridge installer scripts that used to live here have been moved to the new unified repository under:
 `plugins/plugin-mapper/skills/agent-bridge/scripts/bridge_installer.py`

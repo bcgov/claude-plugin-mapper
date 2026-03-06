@@ -2,8 +2,8 @@
 name: agent-bridge
 description: Bridge plugin capabilities (commands, skills, agents, hooks, MCP) to specific agent environments (Claude Code, GitHub Copilot, Gemini, Antigravity). Use this skill when converting or installing a plugin to a target runtime.
 allowed-tools: Bash, Write, Read
+dependencies: ["pip:yaml"]
 ---
-
 # Agent Bridge
 
 ## Overview
@@ -43,11 +43,6 @@ For a standalone plugin install:
 ```bash
 python plugins/plugin-mapper/skills/agent-bridge/scripts/install_all_plugins.py --target gemini
 ```
-
-> **MASTER SYNC**: For a full system update (all plugins, all environments), use the Plugin Manager's master orchestrator:
-> ```bash
-> python plugins/plugin-manager/scripts/update_agent_system.py
-> ```
 
 ---
 

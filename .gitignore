@@ -1,3 +1,0 @@
-# Terraform state and sensitive files (but track terraform code itself)
-.env
-ARCHIVE/

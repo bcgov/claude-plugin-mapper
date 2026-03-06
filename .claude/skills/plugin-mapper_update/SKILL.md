@@ -4,7 +4,6 @@ args:
   dry_run:
     description: "Run in dry-run mode to see what would happen without making changes."
     type: boolean
-github-model-export: true
 ---
 
 # Update / Refresh Plugins

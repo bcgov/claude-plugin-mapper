@@ -1,17 +1,6 @@
----
-description: Install and bridge a plugin into agent environments.
-args:
-  plugin_name:
-    description: "The name of the plugin to install/bridge (e.g., agency-swarm)."
-    type: string
-    required: true
-  target_env:
-    description: "The specific target environment to install for (e.g., antigravity, claude, github, gemini)."
-    type: string
-    required: true
-github-model-export: true
----
-
+command = "plugin-mapper:install"
+description = "The specific target environment to install for (e.g., antigravity, claude, github, gemini)."
+prompt = '''
 # Install/Bridge Plugin
 
 This command installs a plugin into your project (if not present) and bridges its capabilities to your specific agent environment. It prioritizes local plugins first. Note you MUST pass your own architecture name (e.g., `antigravity`) to the `--target_env` parameter.
@@ -40,3 +29,5 @@ fi
 echo "Bridging '$PLUGIN_NAME' to environment '$TARGET_ENV'..."
 python plugins/plugin-mapper/skills/agent-bridge/scripts/bridge_installer.py --plugin "plugins/$PLUGIN_NAME" --target "$TARGET_ENV"
 ```
+
+'''

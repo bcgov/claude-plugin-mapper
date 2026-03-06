@@ -2,8 +2,8 @@
 name: agent-bridge
 description: Bridge plugin capabilities (commands, skills, agents, hooks, MCP) to specific agent environments (Claude Code, GitHub Copilot, Gemini, Antigravity). Use this skill when converting or installing a plugin to a target runtime.
 allowed-tools: Bash, Write, Read
+dependencies: ["pip:yaml"]
 ---
-
 # Agent Bridge
 
 ## Overview
@@ -27,27 +27,22 @@ You are a Universal Translator. You are not limited to the primary examples. If 
 ### Bridge a Single Plugin
 ```bash
 # Bridge to Claude Code specifically
-python plugins/skills/agent-bridge/scripts/bridge_installer.py --plugin <plugin-path> --target claude
+python plugins/plugin-mapper/skills/agent-bridge/scripts/bridge_installer.py --plugin <plugin-path> --target claude
 
 # Bridge to Antigravity specifically
-python plugins/skills/agent-bridge/scripts/bridge_installer.py --plugin <plugin-path> --target antigravity
+python plugins/plugin-mapper/skills/agent-bridge/scripts/bridge_installer.py --plugin <plugin-path> --target antigravity
 ```
 
 **Example:**
 ```bash
-python plugins/skills/agent-bridge/scripts/bridge_installer.py --plugin plugins/my-plugin --target antigravity
+python plugins/plugin-mapper/skills/agent-bridge/scripts/bridge_installer.py --plugin plugins/my-plugin --target antigravity
 ```
 
 ### Bridge All Plugins (Ecosystem Sync)
 For a standalone plugin install:
 ```bash
-python plugins/skills/agent-bridge/scripts/install_all_plugins.py --target gemini
+python plugins/plugin-mapper/skills/agent-bridge/scripts/install_all_plugins.py --target gemini
 ```
-
-> **MASTER SYNC**: If you are performing a full system update (which includes synchronizing Spec Kitty templates, Windsurf workflows, Kernel rules, and all plugins), you should use the Plugin Manager's master orchestrator instead:
-> ```bash
-> python plugins/plugin-manager/scripts/update_agent_system.py
-> ```
 
 ---
 

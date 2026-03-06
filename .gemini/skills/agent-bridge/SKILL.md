@@ -2,8 +2,8 @@
 name: agent-bridge
 description: Bridge plugin capabilities (commands, skills, agents, hooks, MCP) to specific agent environments (Claude Code, GitHub Copilot, Gemini, Antigravity). Use this skill when converting or installing a plugin to a target runtime.
 allowed-tools: Bash, Write, Read
+dependencies: ["pip:yaml"]
 ---
-
 # Agent Bridge
 
 ## Overview
@@ -27,21 +27,21 @@ You are a Universal Translator. You are not limited to the primary examples. If 
 ### Bridge a Single Plugin
 ```bash
 # Bridge to Claude Code specifically
-python ${CLAUDE_PLUGIN_ROOT}/skills/agent-bridge/scripts/bridge_installer.py --plugin <plugin-path> --target claude
+python plugins/plugin-mapper/skills/agent-bridge/scripts/bridge_installer.py --plugin <plugin-path> --target claude
 
 # Bridge to Antigravity specifically
-python ${CLAUDE_PLUGIN_ROOT}/skills/agent-bridge/scripts/bridge_installer.py --plugin <plugin-path> --target antigravity
+python plugins/plugin-mapper/skills/agent-bridge/scripts/bridge_installer.py --plugin <plugin-path> --target antigravity
 ```
 
 **Example:**
 ```bash
-python ${CLAUDE_PLUGIN_ROOT}/skills/agent-bridge/scripts/bridge_installer.py --plugin plugins/my-plugin --target antigravity
+python plugins/plugin-mapper/skills/agent-bridge/scripts/bridge_installer.py --plugin plugins/my-plugin --target antigravity
 ```
 
-### Bridge All Plugins
+### Bridge All Plugins (Ecosystem Sync)
+For a standalone plugin install:
 ```bash
-# Explicitly bridge all plugins to your specific environment
-python ${CLAUDE_PLUGIN_ROOT}/skills/agent-bridge/scripts/install_all_plugins.py --target gemini
+python plugins/plugin-mapper/skills/agent-bridge/scripts/install_all_plugins.py --target gemini
 ```
 
 ---
@@ -52,10 +52,11 @@ The bridge intelligently maps plugin source components to the correct file exten
 
 | Target Environment | `commands/*.md` | `skills/` | `agents/*.md` | `rules/` | `hooks/hooks.json` | `.mcp.json` |
 |-------------------|----------------|-----------|---------------|----------|-------------------|-------------|
-| **Claude Code** (`.claude/`) | `commands/*.md` | `skills/` | `skills/<plugin>/agents/` | Appended to `./CLAUDE.md` | `hooks/<plugin>-hooks.json` | Merged (`./.mcp.json`) |
-| **GitHub Copilot** (`.github/`) | `prompts/*.prompt.md` | `skills/` | `agents/*.agent.md` | Appended to `.github/copilot-instructions.md` | *(Ignored)* | Merged (`./.mcp.json`) |
+| **Claude Code** (`.claude/`) | `commands/*.md` | `skills/` | `skills/<plugin>-<agent>/SKILL.md` | Appended to `./CLAUDE.md` | `hooks/<plugin>-hooks.json` | Merged (`./.mcp.json`) |
+| **GitHub Copilot** (`.github/`) | `prompts/*.prompt.md` | `skills/` | `skills/<plugin>-<agent>/SKILL.md` | Appended to `.github/copilot-instructions.md` | *(Ignored)* | Merged (`./.mcp.json`) |
 | **Google Gemini** (`.gemini/`) | `commands/*.toml` | `skills/` | `skills/<plugin>/agents/` | Appended to `./GEMINI.md` | *(Ignored)* | Merged (`./.mcp.json`) |
-| **Antigravity** (`.agent/`) | `workflows/*.md` | `skills/` | `skills/<plugin>/agents/` | `.agent/rules/` | *(Ignored)* | Merged (`./.mcp.json`) |
+| **Antigravity** (`.agent/`) | `workflows/*.md` | `skills/` | `skills/<plugin>-<agent>/SKILL.md` | `.agent/rules/` | *(Ignored)* | Merged (`./.mcp.json`) |
+| **Azure AI Foundry** (`.azure/`) | *(Ignored)* | `skills/` | `agents/` | *(Ignored)* | *(Ignored)* | `.vscode/mcp.json` (Capability Hosts) |
 | **Universal Generic** (`.<target>/`) | `commands/*.md` | `skills/` | `skills/<plugin>/agents/` | `.<target>/rules/` | *(Ignored)* | Merged (`./.mcp.json`) |
 
 > **GitHub Copilot — Two Agent Types:** The `agents/*.agent.md` column for GitHub Copilot covers two distinct use cases:

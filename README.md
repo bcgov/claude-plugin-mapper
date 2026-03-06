@@ -31,6 +31,7 @@ npx skills update
 
 ### Broader Marketplaces and Ecosystems
 You can also explore and add skills from the broader agent skills marketplace, including:
+- **[Skills Marketplace (skillsmp.com)](https://skillsmp.com/)**: Discover and install a wide variety of skills for your agent environment.
 - **[microsoft/skills](https://github.com/microsoft/skills)**: A comprehensive collection of over 125 skills installable via CLI (`npx skills add microsoft/skills`).
 - **Claude Plugins**: Find various plugins optimized for Claude.
 
